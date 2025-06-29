@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <title>Painel de Fumaça</title>
+    <!-- Google Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-start: #111827; /* gray‑900 */
+        --bg-end: #374151; /* gray‑700 */
+        --safe: #34d399; /* emerald‑400 */
+        --alert: #f87171; /* red‑400 */
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        color: #fff;
+        width: 100vw;
+        height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 3vh;
+        padding: 4vh 5vw;
+        user-select: none;
+      }
+      header,
+      footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header h1 {
+        font-size: clamp(2rem, 5vw + 1rem, 4.5rem);
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+      }
+      #time {
+        font-family: monospace;
+        font-size: clamp(1.25rem, 3vw, 2.5rem);
+        opacity: 0.9;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        justify-items: center;
+        gap: 4vw;
+      }
+      /* Painel de status */
+      .status {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .icon {
+        font-size: clamp(8rem, 16vw, 14rem);
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+      }
+      .pulse {
+        animation: pulse 1.2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.15);
+        }
+      }
+      #status-text {
+        font-size: clamp(2rem, 5vw, 4rem);
+        font-weight: 800;
+        margin-top: 0.6em;
+        text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+      }
+      /* Cartão de PPM */
+      .card {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 1.5rem;
+        padding: 3vh 3vw;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      }
+      .label {
+        font-size: clamp(1rem, 2.5vw, 1.8rem);
+        opacity: 0.75;
+      }
+      #ppm {
+        font-size: clamp(4rem, 10vw, 8rem);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+      #quality {
+        font-size: clamp(1rem, 2.8vw, 1.8rem);
+        margin-top: 2vh;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Monitor de Fumaça</h1>
+      <div id="time">--:--:--</div>
+    </header>
+
+    <main>
+      <section class="status">
+        <span id="icon" class="material-icons-outlined icon">cloud</span>
+        <div id="status-text">Ambiente Seguro</div>
+      </section>
+
+      <section class="card">
+        <div class="label">Concentração de Partículas (PPM)</div>
+        {% if ppm %}
+        <div id="ppm">{{ ppm }}</div>
+        {% else %}
+        <div id="ppm">--</div>
+        <div id="quality">Aguardando dados...</div>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <span>Sistema de Monitoramento • Atualizado em tempo real</span>
+    </footer>
+
+    <script>
+      window.addEventListener("load", () => {
+        const iconEl = document.getElementById("icon");
+        const statusEl = document.getElementById("status-text");
+        const ppmEl = document.getElementById("ppm");
+        const qualityEl = document.getElementById("quality");
+        const timeEl = document.getElementById("time");
+
+        const STORAGE_KEY = "ppm_value";
+
+        /* ---------- Funções de Design ---------- */
+        function setSafe() {
+          iconEl.textContent = "cloud";
+          iconEl.style.color = "var(--safe)";
+          iconEl.classList.remove("pulse");
+          statusEl.textContent = "Ambiente Seguro";
+          statusEl.style.color = "var(--safe)";
+        }
+
+        function setAlert() {
+          iconEl.textContent = "warning";
+          iconEl.style.color = "var(--alert)";
+          iconEl.classList.add("pulse");
+          statusEl.textContent = "FUMAÇA DETECTADA!";
+          statusEl.style.color = "var(--alert)";
+        }
+
+        function updateQuality(ppm) {
+          if (!qualityEl) return;
+          if (ppm < 50) {
+            qualityEl.textContent = "Qualidade do ar excelente";
+          } else if (ppm < 200) {
+            qualityEl.textContent = "Alerta: Atenção moderada";
+          } else {
+            qualityEl.textContent = "Perigo: níveis críticos de gás toxico";
+          }
+        }
+
+        function render(ppm) {
+          ppmEl.textContent = `${ppm}`;
+          updateQuality(ppm);
+          ppm < 100 ? setSafe() : setAlert();
+        }
+
+        function updatePpm(ppm) {
+          if (typeof ppm !== "number" || isNaN(ppm)) return;
+          localStorage.setItem(STORAGE_KEY, ppm); // grava
+          render(ppm); // mostra
+        }
+
+        function renderFromStorage() {
+          const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+          if (!isNaN(saved)) render(saved);
+        }
+
+        function initFromQuery() {
+          const params = new URLSearchParams(window.location.search);
+          const ppmParam = params.get("ppm");
+          if (ppmParam !== null) {
+            const ppm = parseInt(ppmParam, 10);
+            if (!isNaN(ppm)) updatePpm(ppm);
+            params.delete("ppm");
+            const newUrl =
+              window.location.pathname +
+              (params.toString() ? "?" + params.toString() : "");
+            history.replaceState(null, "", newUrl);
+          }
+        }
+
+        window.addEventListener("storage", (evt) => {
+          if (evt.key === STORAGE_KEY) {
+            const novoPPM = parseInt(evt.newValue, 10);
+            if (!isNaN(novoPPM)) render(novoPPM);
+          }
+        });
+
+        function updateClock() {
+          timeEl.textContent = new Date().toLocaleTimeString("pt-BR", {
+            hour12: false,
+          });
+        }
+        setInterval(updateClock, 1000);
+        updateClock(); 
+
+        renderFromStorage();
+        initFromQuery(); 
+
+        const socket = io();
+
+        socket.on("ppm_update", (data) => {
+          const ppm = Number(data.ppm);
+          if (!isNaN(ppm)) updatePpm(ppm); // grava no localStorage + atualiza front
+        });
+      });
+    </script>
+  </body>
+</html>
