@@ -128,12 +128,8 @@
 
       <section class="card">
         <div class="label">Concentração de Partículas (PPM)</div>
-        {% if ppm %}
-        <div id="ppm">{{ ppm }}</div>
-        {% else %}
         <div id="ppm">--</div>
         <div id="quality">Aguardando dados...</div>
-        {% endif %}
       </section>
     </main>
 
@@ -148,8 +144,6 @@
         const ppmEl = document.getElementById("ppm");
         const qualityEl = document.getElementById("quality");
         const timeEl = document.getElementById("time");
-
-        const STORAGE_KEY = "ppm_value";
 
         /* ---------- Funções de Design ---------- */
         function setSafe() {
@@ -185,37 +179,7 @@
           ppm < 100 ? setSafe() : setAlert();
         }
 
-        function updatePpm(ppm) {
-          if (typeof ppm !== "number" || isNaN(ppm)) return;
-          localStorage.setItem(STORAGE_KEY, ppm); // grava
-          render(ppm); // mostra
-        }
-
-        function renderFromStorage() {
-          const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
-          if (!isNaN(saved)) render(saved);
-        }
-
-        function initFromQuery() {
-          const params = new URLSearchParams(window.location.search);
-          const ppmParam = params.get("ppm");
-          if (ppmParam !== null) {
-            const ppm = parseInt(ppmParam, 10);
-            if (!isNaN(ppm)) updatePpm(ppm);
-            params.delete("ppm");
-            const newUrl =
-              window.location.pathname +
-              (params.toString() ? "?" + params.toString() : "");
-            history.replaceState(null, "", newUrl);
-          }
-        }
-
-        window.addEventListener("storage", (evt) => {
-          if (evt.key === STORAGE_KEY) {
-            const novoPPM = parseInt(evt.newValue, 10);
-            if (!isNaN(novoPPM)) render(novoPPM);
-          }
-        });
+       
 
         function updateClock() {
           timeEl.textContent = new Date().toLocaleTimeString("pt-BR", {
@@ -223,17 +187,25 @@
           });
         }
         setInterval(updateClock, 1000);
-        updateClock(); 
+        updateClock();
 
-        renderFromStorage();
-        initFromQuery(); 
-
-        const socket = io();
-
-        socket.on("ppm_update", (data) => {
-          const ppm = Number(data.ppm);
-          if (!isNaN(ppm)) updatePpm(ppm); // grava no localStorage + atualiza front
-        });
+        const urlArquivo = "./read";
+    
+        async function lerArquivo() {
+          try {
+            const resp = await fetch(urlArquivo, { cache: "no-store" });
+            if (!resp.ok) throw new Error(`Erro HTTP: ${resp.status}`);
+              
+            const texto = await resp.json();
+           
+            render(texto.ppm)
+    
+          } catch (e) {
+            console.log(e.message);
+          }
+        }
+        lerArquivo();
+        setInterval(lerArquivo, 5000);
       });
     </script>
   </body>

@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify, render_template
-from flask_socketio import SocketIO, emit
+import json
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
 
-ppm_atual = 0
 
 
 @app.route("/")
@@ -12,34 +10,25 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/read")
+def read():
+
+    with open("data.json", "r", encoding="utf-8") as f:
+        dados = json.load(f)
+    return jsonify(ok=True, ppm=dados["value"])
+
+
 @app.route("/update", methods=["GET"])
 def update():
-    global ppm_atual
-
     ppm = request.args.get("ppm", type=int)
+    with open("data.json", "r", encoding="utf-8") as f:
+        dados = json.load(f) 
+    dados["value"] = ppm
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
 
-    if ppm is None:
-        return jsonify(error="ppm ausente ou inválido"), 400
+    return jsonify(ok=True, ppm=ppm)
 
-    ppm_atual = int(ppm)
-
-    socketio.emit("ppm_update", {"ppm": ppm_atual})
-
-    return jsonify(ok=True, ppm=ppm_atual)
-
-
-@socketio.on("connect")
-def on_connect():
-    emit("ppm_update", {"ppm": ppm_atual})
-    
 
 if __name__ == "__main__":
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=5000,
-        debug=False,            # desliga reloader
-        use_reloader=False,
-        allow_unsafe_werkzeug=True,  # >=5.4
-    )
-    # socketio.run(app, host="localhost", port=5000, debug=True)
+    app.run()
