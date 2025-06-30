@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 ppm_atual = 0
 
@@ -31,6 +31,15 @@ def update():
 @socketio.on("connect")
 def on_connect():
     emit("ppm_update", {"ppm": ppm_atual})
+    
 
 if __name__ == "__main__":
-    socketio.run(app, host="localhost", port=5000, debug=True)
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=5000,
+        debug=False,            # desliga reloader
+        use_reloader=False,
+        allow_unsafe_werkzeug=True,  # >=5.4
+    )
+    # socketio.run(app, host="localhost", port=5000, debug=True)
