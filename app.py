@@ -32,6 +32,5 @@ def update():
 def on_connect():
     emit("ppm_update", {"ppm": ppm_atual})
 
-
 if __name__ == "__main__":
-    socketio.run(app, host="https://web-gas-panel.streamlit.app", port=5000, debug=True)
+    socketio.run(app, host="localhost", port=5000, debug=True)
