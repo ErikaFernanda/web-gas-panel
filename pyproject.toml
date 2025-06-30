@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "web-gas-info"
+version = "0.1.0"
+description = ""
+authors = ["Erika Fernanda <erika.fernanda@smartsuite.imd.ufrn.br>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "^3.1.1"
+flask-socketio = "^5.5.1"
+eventlet = "^0.40.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
