@@ -2,7 +2,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-#define pinoAnalogico A2
+#define pinoAnalogico A0
 #define pinoDigital 7
 
 int buzzerPin = 8;
