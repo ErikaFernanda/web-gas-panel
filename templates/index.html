@@ -175,7 +175,7 @@
         function render(ppm) {
           ppmEl.textContent = `${ppm}`;
           updateQuality(ppm);
-          ppm < 100 ? setSafe() : setAlert();
+          ppm < 160 ? setSafe() : setAlert();
         }
 
        
@@ -204,7 +204,7 @@
           }
         }
         lerArquivo();
-        setInterval(lerArquivo, 5000);
+        setInterval(lerArquivo, 3000);
       });
     </script>
   </body>
